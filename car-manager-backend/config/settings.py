@@ -14,6 +14,10 @@ from pathlib import Path
 import os
 import cloudinary
 
+import environ
+
+env = environ.Env()
+environ.Env.read_env(".env.dev")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,10 +30,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-z-4_9p8*+3+c51q@ve$dm^bfaf(^vbxpyjybm46wnkvwf8m^v9'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
 # Application definition
 
@@ -53,6 +59,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -90,16 +97,35 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #     }
 # }
 
+
+import os
+
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('POSTGRES_ENGINE'),
-        'NAME': os.getenv('POSTGRES_DB'),
-        'USER': os.getenv('POSTGRES_USER'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
-        'HOST': os.getenv('POSTGRES_HOST'),
-        'PORT': os.getenv('POSTGRES_PORT'),
+        'ENGINE': os.getenv(
+            'POSTGRES_ENGINE',
+            'django.db.backends.postgresql'
+        ),
+        'NAME': os.getenv('POSTGRES_DB', 'car_database'),
+        'USER': os.getenv('POSTGRES_USER', 'onebyte'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'ogbonna12345'),
+        'HOST': os.getenv('POSTGRES_HOST', 'db'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
+
+
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': os.getenv('POSTGRES_ENGINE', 'django.db.backends.postgresql'),
+#         'NAME': os.getenv('POSTGRES_DB'),
+#         'USER': os.getenv('POSTGRES_USER'),
+#         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+#         'HOST': os.getenv('POSTGRES_HOST'),
+#         'PORT': os.getenv('POSTGRES_PORT', '5432'),
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -121,10 +147,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        # 'rest_framework.permissions.AllowAny',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        
     ),
 }
 
+
+AUTH_USER_MODEL = 'userauths.User'
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
@@ -142,7 +172,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 # STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-STATIC_ROOT = BASE_DIR/'templates'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
@@ -180,6 +210,7 @@ SIMPLE_JWT = {
 
 SWAGGER_SETTINGS = {
     'USE_SESSION_AUTH': False,
+    'DEFAULT_AUTO_SCHEMA_CLASS': 'drf_yasg.inspectors.SwaggerAutoSchema',
     'SECURITY_DEFINITIONS': {
         'Bearer': {
             'type': 'apiKey',
@@ -188,6 +219,7 @@ SWAGGER_SETTINGS = {
         }
     }
 }
+
 
 # cloudinary.config(
 #     cloud_name="dzlpsd12b",

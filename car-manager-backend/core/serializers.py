@@ -21,38 +21,65 @@ class CarSerializer(serializers.ModelSerializer):
         model = Car
         fields = "__all__"
 
-    def get_image(self, obj):
-        if obj.imageurl:
-            return obj.imageurl.url
+    def get_imageurl(self, obj):
+        if obj.image:
+            return obj.image.url.replace("http://", "https://")
         return None
+# class CarSerializer(serializers.ModelSerializer):
+#     images = CarImageSerializer(many=True, read_only=True)
 
+#     class Meta:
+#         model = Car
+#         fields = "__all__"
 
-
+#     def get_car_image(self, obj):
+#         if obj.car.image:
+#             return str(obj.car.image)
+#         return None
 
 class BookingSerializer(serializers.ModelSerializer):
-    car_details = CarSerializer(source='car', read_only=True)
+    car_name = serializers.CharField(source='car.name', read_only=True)
+    car_brand = serializers.CharField(source='car.make', read_only=True)
+    car_image = serializers.SerializerMethodField()
+    username = serializers.CharField(source='user.username', read_only=True)
 
     class Meta:
         model = Booking
         fields = '__all__'
-        read_only_fields = ['user', 'total_price']
+        read_only_fields = ['user', 'total_price', 'status', 'payment_status']
 
-    def validate(self, attrs):
-        pickup_date = attrs.get('pickup_date')
-        return_date = attrs.get('return_date')
-        car = attrs.get('car')
+    def get_car_image(self, obj):
+        if obj.car.imageurl:
+            return obj.car.imageurl.url.replace('http://', 'https://')
+        return None
 
-        if pickup_date >= return_date:
-            raise serializers.ValidationError('Return date must be after pickup date.')
+    def validate(self, data):
+        pickup_date = data.get('pickup_date')
+        return_date = data.get('return_date')
+        car = data.get('car')
 
-        overlapping = Booking.objects.filter(
+        if return_date < pickup_date:
+            raise serializers.ValidationError(
+                'Return date cannot be earlier than pickup date.'
+            )
+
+        overlapping_bookings = Booking.objects.filter(
             car=car,
             status__in=['pending', 'confirmed'],
-            pickup_date__lt=return_date,
-            return_date__gt=pickup_date,
-        ).exists()
+            pickup_date__lte=return_date,
+            return_date__gte=pickup_date
+        )
 
-        if overlapping:
-            raise serializers.ValidationError('This car is already booked for the selected dates.')
+        if self.instance:
+            overlapping_bookings = overlapping_bookings.exclude(id=self.instance.id)
 
-        return attrs
+        if overlapping_bookings.exists():
+            raise serializers.ValidationError(
+                'Car is already booked for the selected dates.'
+            )
+
+        return data
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)

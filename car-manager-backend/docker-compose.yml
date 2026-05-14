@@ -11,18 +11,36 @@ services:
 
   backend:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      sh -c "python manage.py makemigrations &&
+            python manage.py migrate &&
+            python manage.py runserver 0.0.0.0:8000"
+
     volumes:
       - .:/app
+
     ports:
-        - "8000:8000"
+      - "8000:8000"
+
     depends_on:
       - db
+
     env_file:
       - .env.dev
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
+  # backend:
+  #   build: .
+  #   command: python manage.py runserver 0.0.0.0:8000
+  #   volumes:
+  #     - .:/app
+  #   ports:
+  #       - "8000:8000"
+  #   depends_on:
+  #     - db
+  #   env_file:
+  #     - .env.dev
+  #   dns:
+  #     - 8.8.8.8
+  #     - 8.8.4.4
 
   # frontend:
   #     build: ../car-manager

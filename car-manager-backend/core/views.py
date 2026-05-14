@@ -4,8 +4,10 @@ from django.shortcuts import render
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from .models import Car, Booking
 from .serializers import CarSerializer, BookingSerializer
+from drf_yasg.utils import swagger_auto_schema
 
 
 class CarViewSet(viewsets.ModelViewSet):
@@ -20,28 +22,56 @@ class CarViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+from .models import Booking
+from .serializers import BookingSerializer
+
+
 class BookingViewSet(viewsets.ModelViewSet):
+    queryset = Booking.objects.all()
     serializer_class = BookingSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
+    # permission_classes = [AllowAny]
 
     def get_queryset(self):
-        # Prevent Swagger crash
-        if getattr(self, 'swagger_fake_view', False):
-            return Booking.objects.none()
+        user = self.request.user
 
-        # Prevent AnonymousUser error
-        if not self.request.user.is_authenticated:
-            return Booking.objects.none()
+        if user.is_staff:
+            return Booking.objects.all().order_by('-created_at')
 
-        return Booking.objects.filter(user=self.request.user).order_by('-created_at')
-        
-    def perform_create(self, serializer):
-        booking = serializer.save(user=self.request.user)
-        booking.car.status = 'rented'
-        booking.car.save()
+        return Booking.objects.filter(user=user).order_by('-created_at')
 
-    def perform_update(self, serializer):
-        booking = serializer.save()
-        if booking.status == 'completed':
-            booking.car.status = 'available'
-            booking.car.save()
+    @swagger_auto_schema(request_body=BookingSerializer)
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+    # def perform_create(self, serializer):
+    #     serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def confirm_booking(self, request, pk=None):
+        booking = self.get_object()
+        booking.status = 'confirmed'
+        booking.save()
+
+        return Response({
+            'message': 'Booking confirmed successfully.'
+        })
+
+    @action(detail=True, methods=['post'])
+    def cancel_booking(self, request, pk=None):
+        booking = self.get_object()
+        booking.status = 'cancelled'
+        booking.save()
+
+        return Response({
+            'message': 'Booking cancelled successfully.'
+        })
+
+    @action(detail=True, methods=['post'])
+    def complete_booking(self, request, pk=None):
+        booking = self.get_object()
+        booking.status = 'completed'
+        booking.save()
+
+        return Response({
+            'message': 'Booking completed successfully.'
+        })
