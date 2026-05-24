@@ -49,6 +49,8 @@ urlpatterns = [
 
     path('admin/', admin.site.urls),
     path("core/v1/", include("core.urls")),
+    path('core/v1/gps/', include('gps_tracking.urls')),
+    path('core/v1/vendors/', include('vendors.urls')),
 ]
 if settings.DEBUG:
         urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

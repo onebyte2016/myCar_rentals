@@ -30,7 +30,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-z-4_9p8*+3+c51q@ve$dm^bfaf(^vbxpyjybm46wnkvwf8m^v9'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "True") == "True"
+# DEBUG = os.getenv("DEBUG", "True") == "True"
+DEBUG = True
 
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = ["*"]
@@ -54,10 +55,13 @@ INSTALLED_APPS = [
     'drf_yasg',
     'cloudinary',
     'cloudinary_storage',
+    'gps_tracking',
+    'vendors',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
@@ -147,11 +151,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        # 'rest_framework.permissions.AllowAny',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
     ),
 }
+
+
 
 
 AUTH_USER_MODEL = 'userauths.User'
@@ -170,11 +177,14 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 # STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),

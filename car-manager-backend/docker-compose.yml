@@ -1,19 +1,25 @@
-# version: '3.9'
 services:
   db:
     image: postgres:15
+
     environment:
       POSTGRES_DB: car_database
       POSTGRES_USER: onebyte
       POSTGRES_PASSWORD: ogbonna12345
+
     ports:
       - "5432:5432"
 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   backend:
     build: .
+
     command: >
       sh -c "python manage.py makemigrations &&
             python manage.py migrate &&
+            python manage.py collectstatic --noinput &&
             python manage.py runserver 0.0.0.0:8000"
 
     volumes:
@@ -27,26 +33,42 @@ services:
 
     env_file:
       - .env.dev
-  # backend:
-  #   build: .
-  #   command: python manage.py runserver 0.0.0.0:8000
-  #   volumes:
-  #     - .:/app
-  #   ports:
-  #       - "8000:8000"
-  #   depends_on:
-  #     - db
-  #   env_file:
-  #     - .env.dev
-  #   dns:
-  #     - 8.8.8.8
-  #     - 8.8.4.4
 
-  # frontend:
-  #     build: ../car-manager
-  #     volumes:
-  #       - ../car-manager:/app
-  #     ports:
-  #       - "3001:3000"
-  #     depends_on:
-  #       - backend
+volumes:
+  postgres_data:
+
+
+
+
+
+
+# # version: '3.9'
+# services:
+#   db:
+#     image: postgres:15
+#     environment:
+#       POSTGRES_DB: car_database
+#       POSTGRES_USER: onebyte
+#       POSTGRES_PASSWORD: ogbonna12345
+#     ports:
+#       - "5432:5432"
+
+#   backend:
+#     build: .
+#     command: >
+#       sh -c "python manage.py makemigrations &&
+#             python manage.py migrate &&
+#             python manage.py runserver 0.0.0.0:8000"
+
+#     volumes:
+#       - .:/app
+
+#     ports:
+#       - "8000:8000"
+
+#     depends_on:
+#       - db
+
+#     env_file:
+#       - .env.dev
+ 

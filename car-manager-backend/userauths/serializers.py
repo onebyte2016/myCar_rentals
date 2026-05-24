@@ -15,24 +15,44 @@ from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
+
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    username_field = User.EMAIL_FIELD
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        # Add custom user fields
-        token['full_name'] = user.full_name
-        token['email'] = user.email
-        token['username'] = user.username
+    username_field = "email"
 
-        # Include all fields from the Company model
-        if hasattr(user, 'company') and user.company:
-            token['company'] = model_to_dict(user.company)
-        else:
-            token['company'] = None  # Handle cases where the user has no associated company
+    def validate(self, attrs):
+        data = super().validate(attrs)
 
-        return token
+        # Add extra response data (optional)
+        data["user"] = {
+            "id": self.user.id,
+            "email": self.user.email,
+            "username": self.user.username,
+            "full_name": self.user.full_name,
+        }
+
+        return data
+# class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+#     username_field = User.EMAIL_FIELD
+#     @classmethod
+#     def get_token(cls, user):
+#         token = super().get_token(user)
+#         # Add custom user fields
+#         token['full_name'] = user.full_name
+#         token['email'] = user.email
+#         token['username'] = user.username
+
+#         # Include all fields from the Company model
+#         if hasattr(user, 'company') and user.company:
+#             token['company'] = model_to_dict(user.company)
+#         else:
+#             token['company'] = None  # Handle cases where the user has no associated company
+
+#         return token
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

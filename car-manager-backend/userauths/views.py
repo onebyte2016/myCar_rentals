@@ -30,8 +30,29 @@ from rest_framework.views import APIView
 
 
 # Create your views here.
+
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["email", "password"],
+            properties={
+                "email": openapi.Schema(type=openapi.TYPE_STRING),
+                "password": openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        )
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+# class MyTokenObtainPairView(TokenObtainPairView):
+#     serializer_class = MyTokenObtainPairSerializer
 
 
 

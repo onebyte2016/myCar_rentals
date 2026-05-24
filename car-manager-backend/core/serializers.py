@@ -22,9 +22,14 @@ class CarSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def get_imageurl(self, obj):
-        if obj.image:
-            return obj.image.url.replace("http://", "https://")
+        try:
+            if obj.image:
+                return obj.image.url.replace("http://", "https://")
+        except Exception:
+            return None
+
         return None
+    
 # class CarSerializer(serializers.ModelSerializer):
 #     images = CarImageSerializer(many=True, read_only=True)
 
@@ -42,6 +47,8 @@ class BookingSerializer(serializers.ModelSerializer):
     car_brand = serializers.CharField(source='car.make', read_only=True)
     car_image = serializers.SerializerMethodField()
     username = serializers.CharField(source='user.username', read_only=True)
+    plate_number = serializers.CharField(source='car.plate_number', read_only=True)  # ← add this
+
 
     class Meta:
         model = Booking
@@ -49,14 +56,23 @@ class BookingSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'total_price', 'status', 'payment_status']
 
     def get_car_image(self, obj):
-        if obj.car.imageurl:
-            return obj.car.imageurl.url.replace('http://', 'https://')
+        try:
+            if obj.car.image:
+                return obj.car.image.url.replace("http://", "https://")
+        except Exception:
+            return None
+
         return None
 
     def validate(self, data):
         pickup_date = data.get('pickup_date')
         return_date = data.get('return_date')
         car = data.get('car')
+
+        print("BOOKING DATA:", data)
+
+        if not pickup_date or not return_date:
+            return data
 
         if return_date < pickup_date:
             raise serializers.ValidationError(

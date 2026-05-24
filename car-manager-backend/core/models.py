@@ -7,6 +7,7 @@ from cloudinary.models import CloudinaryField
 from django.conf import settings
 from decimal import Decimal
 
+
 User = get_user_model()
 
 
@@ -16,7 +17,7 @@ class Car(models.Model):
         ('rented', 'Rented'),
         ('maintenance', 'Maintenance'),
     ]
-
+    vendor = models.ForeignKey("vendors.VendorProfile", on_delete=models.SET_NULL, null=True, blank=True, related_name='cars')
     name = models.CharField(max_length=100)
     city_mpg = models.CharField(max_length=100, blank=True, null=True)
     fuel_type = models.CharField(max_length=100, blank=True, null=True)
@@ -40,11 +41,6 @@ class Car(models.Model):
     def __str__(self):
         return f"{self.make} {self.model} ({self.plate_number})"
 
-
-# from django.db import models
-# from django.contrib.auth.models import User
-# 
-# from core.models import Car
 
 
 class Booking(models.Model):
@@ -94,16 +90,30 @@ class Booking(models.Model):
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def save(self, *args, **kwargs):
-        rental_days = (self.return_date - self.pickup_date).days
-        rental_days = max(rental_days, 1)
+    # def save(self, *args, **kwargs):
 
-        self.total_price = Decimal(rental_days) * self.car.price_per_day
+    #     if self.pickup_date and self.return_date:
+    #         rental_days = (self.return_date - self.pickup_date).days
+    #         rental_days = max(rental_days, 1)
+
+    #         self.total_price = Decimal(rental_days) * self.car.price_per_day
+
+    #     super().save(*args, **kwargs)
+  
+
+
+    def save(self, *args, **kwargs):
+
+        if self.pickup_date and self.return_date and self.car:
+            rental_days = (self.return_date - self.pickup_date).days
+            rental_days = max(rental_days, 1)
+
+            self.total_price = Decimal(rental_days) * self.car.price_per_day
 
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Booking #{self.id} - {self.user.username}"
+        return f"Booking #{self.id} - {self.user.email}"
 
 class CarImage(models.Model):
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name="images")
