@@ -7,7 +7,7 @@ if [ "$DATABASE" = "postgres" ]; then
     done
     echo "PostgreSQL is ready :-D"
 fi
-
+# docker cp fix_payments.py car-manager-backend-backend-1:/paymentsystem/fix_payments.py
 # Run migrations and start server
 python manage.py makemigrations
 python manage.py migrate

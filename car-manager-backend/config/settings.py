@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'cloudinary_storage',
     'gps_tracking',
     'vendors',
+    'paymentsystem',
 ]
 
 MIDDLEWARE = [
@@ -130,6 +131,24 @@ DATABASES = {
 #         'PORT': os.getenv('POSTGRES_PORT', '5432'),
 #     }
 # }
+
+
+# Stripe
+STRIPE_SECRET_KEY = 'sk_live_...'
+STRIPE_PUBLISHABLE_KEY = 'pk_live_...'
+STRIPE_WEBHOOK_SECRET = 'whsec_...'
+
+# Thawani
+THAWANI_API_KEY = 'your_api_key'
+THAWANI_PUBLISHABLE_KEY = 'your_publishable_key'
+THAWANI_SUCCESS_URL = 'https://yourdomain.com/payment/success'
+THAWANI_CANCEL_URL = 'https://yourdomain.com/payment/cancel'
+
+# Flutterwave
+FLUTTERWAVE_SECRET_KEY = 'FLWSECK_TEST-...'
+FLUTTERWAVE_PUBLIC_KEY = 'FLWPUBK_TEST-...'
+FLUTTERWAVE_WEBHOOK_SECRET = 'your_webhook_secret'
+FLUTTERWAVE_REDIRECT_URL = 'https://yourdomain.com/payment/flutterwave/callback'
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
