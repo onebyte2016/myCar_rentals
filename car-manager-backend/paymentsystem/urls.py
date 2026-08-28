@@ -5,6 +5,7 @@ from .views import (
     CurrencyListView,
     InitiatePaymentView,
     VerifyPaymentView,
+    VerifyThawaniBookingPaymentView,
     StripeWebhookView,
     FlutterwaveWebhookView,
     WalletView,
@@ -37,6 +38,7 @@ urlpatterns = [
         # ── Gateway specific URLs (what the frontend calls) ──
     path('thawani/create-session/', InitiatePaymentView.as_view()),
     path('thawani/verify/', VerifyPaymentView.as_view()),
+    path('thawani/verify-booking/<int:booking_id>/', VerifyThawaniBookingPaymentView.as_view()),
     path('stripe/create-intent/', InitiatePaymentView.as_view()),
     path('stripe/confirm/', VerifyPaymentView.as_view()),
     path('flutterwave/initiate/', InitiatePaymentView.as_view()),

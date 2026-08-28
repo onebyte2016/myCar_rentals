@@ -25,6 +25,8 @@ from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 
 
@@ -118,7 +120,8 @@ class RoleViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]  # Change as needed
+    # Lists/edits/deletes real user accounts, so this is admin-only (is_staff).
+    permission_classes = [IsAdminUser]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -163,3 +166,129 @@ class LogoutView(APIView):
                 {"error": "Invalid or expired token"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class ChangePasswordView(APIView):
+    """Logged-in users change their own password, given their current password."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+        new_password2 = request.data.get("new_password2")
+
+        if not old_password or not new_password or not new_password2:
+            return Response(
+                {"detail": "old_password, new_password and new_password2 are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = request.user
+
+        if not user.check_password(old_password):
+            return Response(
+                {"old_password": "Current password is incorrect."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if new_password != new_password2:
+            return Response(
+                {"new_password": "Passwords do not match."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_password(new_password, user=user)
+        except DjangoValidationError as e:
+            return Response({"new_password": list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"detail": "Password updated successfully."}, status=status.HTTP_200_OK)
+
+
+class PasswordResetRequestView(APIView):
+    """Starts the 'forgot password' flow: emails a reset link if the address is registered."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"email": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Always return the same response whether or not the email is
+        # registered, so this endpoint can't be used to enumerate accounts.
+        generic_response = Response(
+            {"detail": "If an account exists for that email, a reset link has been sent."},
+            status=status.HTTP_200_OK,
+        )
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return generic_response
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+
+        send_mail(
+            subject="Reset your Abeliza Rentals password",
+            message=(
+                f"Hi {user.full_name or user.username},\n\n"
+                "We received a request to reset your password. Click the link "
+                f"below to choose a new one:\n\n{reset_url}\n\n"
+                "If you didn't request this, you can safely ignore this email."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=True,
+        )
+
+        return generic_response
+
+
+class PasswordResetConfirmView(APIView):
+    """Completes the 'forgot password' flow using the uid/token from the emailed link."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        uid = request.data.get("uid")
+        token = request.data.get("token")
+        new_password = request.data.get("new_password")
+        new_password2 = request.data.get("new_password2")
+
+        if not uid or not token or not new_password or not new_password2:
+            return Response(
+                {"detail": "uid, token, new_password and new_password2 are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if new_password != new_password2:
+            return Response(
+                {"new_password": "Passwords do not match."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_id)
+        except Exception:
+            return Response({"detail": "Invalid reset link."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response(
+                {"detail": "This reset link is invalid or has expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_password(new_password, user=user)
+        except DjangoValidationError as e:
+            return Response({"new_password": list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)

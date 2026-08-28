@@ -15,6 +15,35 @@ class CarViewSet(viewsets.ModelViewSet):
     serializer_class = CarSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    def get_queryset(self):
+        queryset = Car.objects.all().order_by('-created_at')
+        params = self.request.query_params
+
+        make = params.get('make')
+        if make:
+            queryset = queryset.filter(make__icontains=make)
+
+        model = params.get('model')
+        if model:
+            queryset = queryset.filter(model__icontains=model)
+
+        year = params.get('year')
+        if year:
+            queryset = queryset.filter(year=year)
+
+        fuel_type = params.get('fuel_type')
+        if fuel_type:
+            queryset = queryset.filter(fuel_type__icontains=fuel_type)
+
+        limit = params.get('limit')
+        if limit:
+            try:
+                queryset = queryset[:int(limit)]
+            except (ValueError, TypeError):
+                pass
+
+        return queryset
+
     @action(detail=False, methods=['get'])
     def available(self, request):
         cars = Car.objects.filter(status='available')

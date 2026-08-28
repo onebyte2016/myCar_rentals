@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework import status
 from decimal import Decimal
-from .utils import generate_invoice
+from .utils import generate_invoice, create_split_payment
 from .services import StripeGateway, ThawaniGateway, FlutterwaveGateway
 
 from .models import (
@@ -16,7 +16,7 @@ from .models import (
 )
 from .serializers import (
      WalletSerializer, WalletTransactionSerializer,
-     CouponSerializer,
+     CouponSerializer, CouponValidateSerializer,
     PaymentSerializer,
     RefundSerializer, InvoiceSerializer, DynamicPricingRuleSerializer,
 )
@@ -95,7 +95,7 @@ class WalletTopUpView(APIView):
     def post(self, request):
         amount = Decimal(str(request.data.get('amount', 0)))
         gateway = request.data.get('gateway', 'stripe')
-        currency = request.data.get('currency', 'USD')
+        currency = request.data.get('currency', 'OMR')
 
         if amount <= 0:
             return Response({'error': 'Invalid amount'}, status=400)
@@ -163,64 +163,13 @@ class WalletTopUpView(APIView):
 
         except Exception as e:
             return Response({'error': str(e)}, status=400)
-# class WalletTopUpView(APIView):
-#     """Initiates top-up via a payment gateway, then credits wallet on webhook."""
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request):
-#         serializer = WalletSerializer(data=request.data)
-#         if not serializer.is_valid():
-#             return Response(serializer.errors, status=400)
-
-#         data = serializer.validated_data
-#         gateway = data['gateway']
-#         amount = data['amount']
-#         currency = get_object_or_404(Currency, code=data['currency_code'].upper())
-#         tx_ref = f'TOPUP-{request.user.id}-{uuid.uuid4().hex[:8].upper()}'
-
-#         try:
-#             if gateway == 'stripe':
-#                 gw = StripeGateway()
-#                 result = gw.create_payment_intent(amount, currency.code, metadata={
-#                     'type': 'wallet_topup',
-#                     'user_id': request.user.id,
-#                     'tx_ref': tx_ref,
-#                 })
-#                 return Response({'gateway': 'stripe', 'client_secret': result['client_secret'], 'tx_ref': tx_ref})
-
-#             elif gateway == 'thawani':
-#                 gw = ThawaniGateway()
-#                 result = gw.create_session(
-#                     amount_omr=amount,
-#                     booking_id=f'topup-{request.user.id}',
-#                     success_url=f'{request.build_absolute_uri("/")}/wallet?status=success',
-#                     cancel_url=f'{request.build_absolute_uri("/")}/wallet?status=cancelled',
-#                     metadata={'type': 'wallet_topup', 'user_id': request.user.id},
-#                 )
-#                 return Response({'gateway': 'thawani', 'checkout_url': result['checkout_url'], 'tx_ref': tx_ref})
-
-#             elif gateway == 'flutterwave':
-#                 gw = FlutterwaveGateway()
-#                 result = gw.initiate_payment(
-#                     amount=amount, currency=currency.code,
-#                     email=request.user.email,
-#                     phone=getattr(request.user, 'phone_number', ''),
-#                     name=f'{request.user.first_name} {request.user.last_name}',
-#                     tx_ref=tx_ref,
-#                     redirect_url=f'{request.build_absolute_uri("/")}/wallet?status=success',
-#                 )
-#                 return Response({'gateway': 'flutterwave', 'checkout_url': result['link'], 'tx_ref': tx_ref})
-
-#         except Exception as e:
-#             return Response({'error': str(e)}, status=400)
-
 
 # ── Coupon ────────────────────────────────────────────────────────────────────
 class CouponValidateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = CouponSerializer(data=request.data)
+        serializer = CouponValidateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=400)
 
@@ -242,14 +191,14 @@ class CouponValidateView(APIView):
                 'message': f'Minimum booking amount is {coupon.min_booking_amount}'
             })
 
-        discount = coupon.calculate_discount(booking_amount)
+        discount, discount_message = coupon.calculate_discount(booking_amount)
         final_amount = float(booking_amount) - float(discount)
 
         return Response({
             'valid': True,
             'code': coupon.code,
-            'discount_type': coupon.discount_type,
-            'discount_value': float(coupon.discount_value),
+            'discount_type': coupon.type,
+            'discount_value': float(coupon.value),
             'discount_amount': float(discount),
             'original_amount': float(booking_amount),
             'final_amount': float(final_amount),
@@ -379,154 +328,6 @@ class InitiatePaymentView(APIView):
             })
 
         return Response({'error': 'Unknown payment gateway'}, status=400)
-# class InitiatePaymentView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request):
-#         serializer = InitiatePaymentSerializer(data=request.data)
-#         if not serializer.is_valid():
-#             return Response(serializer.errors, status=400)
-
-#         data = serializer.validated_data
-#         from core.models import Booking
-#         booking = get_object_or_404(Booking, id=data['booking_id'], user=request.user)
-#         currency = get_object_or_404(Currency, code=data['currency_code'].upper())
-#         amount = float(booking.total_price)
-#         original_amount = amount
-#         discount_amount = 0
-#         coupon = None
-
-#         # Apply coupon if provided
-#         if data.get('coupon_code'):
-#             try:
-#                 coupon = Coupon.objects.get(code=data['coupon_code'].upper())
-#                 valid, msg = coupon.is_valid()
-#                 if valid:
-#                     discount_amount = float(coupon.calculate_discount(amount))
-#                     amount -= discount_amount
-#                     coupon.usage_count += 1
-#                     coupon.save(update_fields=['usage_count'])
-#             except Coupon.DoesNotExist:
-#                 pass
-
-#         # Create payment record
-#         payment = Payment.objects.create(
-#             booking=booking,
-#             user=request.user,
-#             amount=amount,
-#             original_amount=original_amount,
-#             discount_amount=discount_amount,
-#             currency=currency,
-#             gateway=data['gateway'],
-#             method=data['method'],
-#             coupon=coupon,
-#             security_deposit=data.get('security_deposit', 0),
-#             ip_address=get_client_ip(request),
-#             status='processing',
-#         )
-
-#         try:
-#             gateway = data['gateway']
-#             tx_ref = f'PAY-{payment.id}-{uuid.uuid4().hex[:8].upper()}'
-
-#             # ── Wallet payment (instant) ──
-#             if gateway == 'wallet':
-#                 wallet = get_object_or_404(Wallet, user=request.user)
-#                 wallet.debit(amount)
-#                 WalletTransaction.objects.create(
-#                     wallet=wallet,
-#                     amount=amount,
-#                     transaction_type='debit',
-#                     description=f'Payment for booking #{booking.id}',
-#                     reference=str(payment.reference),
-#                     balance_after=wallet.balance,
-#                 )
-#                 payment.gateway_reference = tx_ref
-#                 payment.mark_completed()
-#                 create_split(payment)
-#                 Invoice.objects.create(payment=payment, user=request.user, status='issued', issued_at=timezone.now())
-#                 return Response({'status': 'completed', 'payment_id': str(payment.reference)})
-
-#             # ── Stripe ──
-#             elif gateway == 'stripe':
-#                 gw = StripeGateway()
-#                 result = gw.create_payment_intent(amount, currency.code, metadata={
-#                     'payment_id': str(payment.reference),
-#                     'booking_id': booking.id,
-#                 })
-#                 payment.gateway_reference = result['payment_intent_id']
-#                 payment.save(update_fields=['gateway_reference'])
-#                 return Response({
-#                     'status': 'processing',
-#                     'gateway': 'stripe',
-#                     'client_secret': result['client_secret'],
-#                     'payment_id': str(payment.reference),
-#                 })
-
-#             # ── Thawani ──
-#             elif gateway == 'thawani':
-#                 gw = ThawaniGateway()
-#                 result = gw.create_session(
-#                     amount_omr=amount,
-#                     booking_id=booking.id,
-#                     success_url=f'{request.build_absolute_uri("/")}/booking/{booking.id}?payment=success',
-#                     cancel_url=f'{request.build_absolute_uri("/")}/booking/{booking.id}?payment=cancelled',
-#                 )
-#                 payment.gateway_reference = result['session_id']
-#                 payment.save(update_fields=['gateway_reference'])
-#                 return Response({
-#                     'status': 'processing',
-#                     'gateway': 'thawani',
-#                     'checkout_url': result['checkout_url'],
-#                     'payment_id': str(payment.reference),
-#                 })
-
-#             # ── Flutterwave ──
-#             elif gateway == 'flutterwave':
-#                 gw = FlutterwaveGateway()
-#                 payment_options = 'mobilemoney,card' if data['method'] == 'mobile_money' else 'card,banktransfer'
-#                 result = gw.initiate_payment(
-#                     amount=amount, currency=currency.code,
-#                     email=request.user.email,
-#                     phone=data.get('phone_number', ''),
-#                     name=f'{request.user.first_name} {request.user.last_name}',
-#                     tx_ref=tx_ref,
-#                     redirect_url=f'{request.build_absolute_uri("/")}/booking/{booking.id}?payment=success',
-#                     payment_options=payment_options,
-#                 )
-#                 payment.gateway_reference = tx_ref
-#                 payment.save(update_fields=['gateway_reference'])
-#                 return Response({
-#                     'status': 'processing',
-#                     'gateway': 'flutterwave',
-#                     'checkout_url': result['link'],
-#                     'payment_id': str(payment.reference),
-#                 })
-
-#             # ── Bank Transfer ──
-#             elif gateway == 'bank_transfer':
-#                 payment.gateway_reference = tx_ref
-#                 payment.notes = f"Bank: {data.get('bank_name', '')} | Account: {data.get('account_number', '')}"
-#                 payment.status = 'pending'
-#                 payment.save(update_fields=['gateway_reference', 'notes', 'status'])
-#                 return Response({
-#                     'status': 'pending',
-#                     'gateway': 'bank_transfer',
-#                     'payment_id': str(payment.reference),
-#                     'instructions': {
-#                         'bank_name': 'Abeliza Bank',
-#                         'account_number': '1234567890',
-#                         'account_name': 'Abeliza Car Rentals',
-#                         'reference': tx_ref,
-#                         'amount': amount,
-#                         'currency': currency.code,
-#                     }
-#                 })
-
-#         except Exception as e:
-#             payment.status = 'failed'
-#             payment.save(update_fields=['status'])
-#             return Response({'error': str(e)}, status=400)
 
 
 class PaymentDetailView(APIView):
@@ -586,6 +387,69 @@ class VerifyPaymentView(APIView):
             return Response({'status': payment.status, 'payment_id': str(payment.reference)})
         except Exception as e:
             return Response({'error': str(e)}, status=400)
+
+
+class VerifyThawaniBookingPaymentView(APIView):
+    """
+    GET /payments/thawani/verify-booking/<booking_id>/
+    Called by the frontend's /payment/success and /payment/cancel pages after
+    Thawani redirects back with ?ref=<booking_id>. Confirms the payment status
+    directly with Thawani (never trust the redirect alone) and finalizes the
+    booking/invoice if it was actually paid.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, booking_id):
+        from core.models import Booking
+        from core.serializers import BookingSerializer
+
+        booking = get_object_or_404(Booking, id=booking_id, user=request.user)
+        payment = Payment.objects.filter(
+            booking=booking, user=request.user, method='thawani'
+        ).order_by('-created_at').first()
+
+        if not payment:
+            return Response({'error': 'No Thawani payment found for this booking'}, status=404)
+
+        if payment.status == 'completed':
+            return Response({
+                'status': 'completed',
+                'payment_reference': payment.reference,
+                'amount': float(payment.amount),
+                'currency': payment.currency,
+                'booking': BookingSerializer(booking).data,
+            })
+
+        result = ThawaniGateway.verify_session(payment.gateway_reference)
+
+        if result.get('success'):
+            payment.status = 'completed'
+            payment.completed_at = timezone.now()
+            payment.save()
+            booking.payment_status = 'paid'
+            booking.save()
+            try:
+                generate_invoice(payment)
+            except Exception:
+                pass
+            try:
+                create_split_payment(payment)
+            except Exception:
+                pass
+            return Response({
+                'status': 'completed',
+                'payment_reference': payment.reference,
+                'amount': float(payment.amount),
+                'currency': payment.currency,
+                'booking': BookingSerializer(booking).data,
+            })
+
+        payment.status = 'failed'
+        payment.save()
+        return Response({
+            'status': 'failed',
+            'message': result.get('error') or f"Payment status: {result.get('status', 'unknown')}",
+        }, status=400)
 
 
 # ── Webhooks ──────────────────────────────────────────────────────────────────

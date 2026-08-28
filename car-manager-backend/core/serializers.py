@@ -47,13 +47,26 @@ class BookingSerializer(serializers.ModelSerializer):
     car_brand = serializers.CharField(source='car.make', read_only=True)
     car_image = serializers.SerializerMethodField()
     username = serializers.CharField(source='user.username', read_only=True)
+    client_name = serializers.SerializerMethodField()
     plate_number = serializers.CharField(source='car.plate_number', read_only=True)  # ← add this
 
+    def get_client_name(self, obj):
+        return obj.user.full_name or obj.user.username or obj.user.email
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        # status/payment_status stay writable for staff (admin dashboard actions
+        # like "Mark as Completed"), but stay locked down for regular customers
+        # submitting/editing their own booking.
+        if not (request and getattr(request.user, 'is_staff', False)):
+            self.fields['status'].read_only = True
+            self.fields['payment_status'].read_only = True
 
     class Meta:
         model = Booking
         fields = '__all__'
-        read_only_fields = ['user', 'total_price', 'status', 'payment_status']
+        read_only_fields = ['user', 'total_price']
 
     def get_car_image(self, obj):
         try:

@@ -24,6 +24,14 @@ User = get_user_model()
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = "email"
 
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # Embed is_staff in the JWT itself so the frontend can gate
+        # admin-only UI (e.g. the Users page) without an extra request.
+        token["is_staff"] = user.is_staff
+        return token
+
     def validate(self, attrs):
         data = super().validate(attrs)
 
@@ -57,7 +65,10 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
+        # password/otp/refresh are sensitive/internal and must never be
+        # exposed via the API (this serializer now backs the admin
+        # users list/edit endpoints, so GET responses are visible in the UI)
+        exclude = ['password', 'otp', 'refresh']
 
 class ProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer()
@@ -113,7 +124,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             full_name=validated_data['full_name'],
             email=validated_data['email'],
             username=validated_data['email'].split('@')[0],
-            is_active=False,  # 👈 required for email verification
+            is_active=True,  # email verification isn't wired up (send_mail is disabled in RegisterView), so don't lock accounts out
         )
 
         user.set_password(validated_data['password'])

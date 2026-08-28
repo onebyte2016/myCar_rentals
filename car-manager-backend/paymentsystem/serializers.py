@@ -24,6 +24,11 @@ class CouponSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class CouponValidateSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    booking_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
 class DynamicPricingRuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = DynamicPricingRule

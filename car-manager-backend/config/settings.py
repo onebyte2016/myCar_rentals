@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "userauths",
     "core",
@@ -139,10 +140,10 @@ STRIPE_PUBLISHABLE_KEY = 'pk_live_...'
 STRIPE_WEBHOOK_SECRET = 'whsec_...'
 
 # Thawani
-THAWANI_API_KEY = 'your_api_key'
-THAWANI_PUBLISHABLE_KEY = 'your_publishable_key'
-THAWANI_SUCCESS_URL = 'https://yourdomain.com/payment/success'
-THAWANI_CANCEL_URL = 'https://yourdomain.com/payment/cancel'
+THAWANI_API_KEY = 'rRQ26GcsZzoEhbrP2HZvLYDbn9C9et'
+THAWANI_PUBLISHABLE_KEY = 'HGvTMLDssJghr9tlN9gr4DVYt0qyBy'
+THAWANI_SUCCESS_URL = 'http://localhost:3000/payment/success'
+THAWANI_CANCEL_URL = 'http://localhost:3000/payment/cancel'
 
 # Flutterwave
 FLUTTERWAVE_SECRET_KEY = 'FLWSECK_TEST-...'
@@ -263,3 +264,20 @@ cloudinary.config(
 )
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# Used to build links that get emailed to users (e.g. the password reset link).
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# Defaults to the console backend so reset-password emails print to the
+# runserver log during local development. To send real emails, set
+# EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend plus
+# EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD (e.g. in .env.dev).
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@abelizarentals.com")
