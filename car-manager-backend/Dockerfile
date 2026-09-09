@@ -1,5 +1,6 @@
 # Use a slim Python image
-FROM python:3.12.2-slim-bullseye
+# FROM python:3.12.2-slim-bullseye
+FROM python:3.12-slim-bookworm
 
 # Set work directory inside container
 WORKDIR /app
