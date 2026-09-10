@@ -2,8 +2,8 @@
 import InputField from '@/components/fields/InputField';
 import { FcGoogle } from 'react-icons/fc';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { loginUser } from '@/app/lib/actions';
 import Default from '@/components/auth/variants/DefaultAuthLayout';
 import Checkbox from '@/components/checkbox';
@@ -15,6 +15,8 @@ function SignInDefault() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") || "/";
 
   return (
     // <Default
@@ -99,7 +101,7 @@ function SignInDefault() {
 
               if (res.success) {
                 router.refresh();   // 🔥 updates navbar + cookies state
-                router.push("/");   // 🔥 redirect home
+                router.push(next);  // 🔥 redirect home, or back to what they were doing
               } else {
                 alert(res.error);
               }
@@ -174,4 +176,10 @@ function SignInDefault() {
   );
 }
 
-export default SignInDefault;
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInDefault />
+    </Suspense>
+  );
+}

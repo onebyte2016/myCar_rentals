@@ -1,8 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import apiService from '@/app/services/apiService'
 import PaymentModal from './Paymentmodal'
+
+const isAuthenticated = () =>
+  typeof document !== 'undefined' && document.cookie.includes('session_access_token=')
+
+const pendingBookingKey = (carId: number) => `pendingBooking_${carId}`
 
 interface BookingReceipt {
   booking_id: string | number
@@ -27,6 +33,7 @@ interface BookingReceipt {
 }
 
 const BookingForm = ({ carId }: { carId: number }) => {
+  const router = useRouter()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [receipt, setReceipt] = useState<BookingReceipt | null>(null)
@@ -34,6 +41,7 @@ const BookingForm = ({ carId }: { carId: number }) => {
   const [bookingId, setBookingId] = useState<number | null>(null)
   const [bookedRanges, setBookedRanges] = useState<{ start: string; end: string }[]>([])
   const [dateError, setDateError] = useState('')
+  const [resumedNotice, setResumedNotice] = useState(false)
 
   const [form, setForm] = useState({
     pickup_date: '',
@@ -51,6 +59,22 @@ const BookingForm = ({ carId }: { carId: number }) => {
     address: '',
     gsm: '',
   })
+
+  // ── Restore a booking in progress if the user got sent to sign in ────
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(pendingBookingKey(carId))
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed?.form) setForm((prev) => ({ ...prev, ...parsed.form }))
+        if (parsed?.step) setStep(parsed.step)
+        localStorage.removeItem(pendingBookingKey(carId))
+        if (isAuthenticated()) setResumedNotice(true)
+      }
+    } catch (err) {
+      console.error('Failed to restore pending booking:', err)
+    }
+  }, [carId])
 
   // ── Fetch booked dates for this car ───────────────────────
   useEffect(() => {
@@ -117,6 +141,11 @@ const BookingForm = ({ carId }: { carId: number }) => {
   const prevStep = () => setStep((prev) => prev - 1)
 
   const handleSubmit = async () => {
+    if (!isAuthenticated()) {
+      localStorage.setItem(pendingBookingKey(carId), JSON.stringify({ form, step: 3 }))
+      router.push(`/sign-in?next=${encodeURIComponent('/booking/' + carId)}`)
+      return
+    }
     try {
       setLoading(true)
       const data = await apiService.post('/bookings/', { car: carId, ...form })
@@ -252,6 +281,12 @@ const BookingForm = ({ carId }: { carId: number }) => {
   return (
     <div className='bg-white p-6 rounded-xl shadow-md flex flex-col gap-4'>
       <h2 className='text-xl font-bold'>Book This Car</h2>
+
+      {resumedNotice && (
+        <div className='bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700'>
+          ✅ Welcome back! We restored your booking details — pick up where you left off.
+        </div>
+      )}
 
       {/* STEP INDICATOR */}
       <div className='flex gap-2 text-sm font-medium'>
