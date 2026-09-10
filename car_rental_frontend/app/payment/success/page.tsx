@@ -145,9 +145,16 @@ function PaymentSuccessContent() {
     doc.save(`payment-receipt-${result.payment_reference || booking?.id || 'abeliza'}.pdf`)
   }
 
+  const DetailRow = ({ label, value }: { label: string; value: string }) => (
+    <div className="flex justify-between px-4 py-2 text-sm">
+      <span className="font-semibold text-gray-700">{label}:</span>
+      <span className="text-gray-800">{value || '—'}</span>
+    </div>
+  )
+
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
+    <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 px-4 print:block print:min-h-0 print:bg-white print:p-0">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm print:hidden">
         {loading && (
           <>
             <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-green-600" />
@@ -231,6 +238,71 @@ function PaymentSuccessContent() {
           </>
         )}
       </div>
+
+      {/* Print-only receipt — mirrors the downloaded PDF layout exactly.
+          Hidden on screen, shown only when printing (window.print()). */}
+      {!loading && result?.status === 'completed' && (
+        <div className="hidden print:block w-full">
+          <div className="bg-blue-800 text-white px-6 py-4">
+            <h1 className="text-center text-2xl font-bold tracking-wide">ABELIZA CAR RENTALS</h1>
+            <p className="text-center text-sm mt-1">PAYMENT RECEIPT</p>
+            <div className="flex justify-between text-xs text-blue-200 mt-4">
+              <span>123 Rental Street, Salalah, Oman</span>
+              <span>info@abeliza.com</span>
+              <span>+96896069582</span>
+            </div>
+          </div>
+
+          <p className="text-right text-xs text-gray-400 px-6 py-1">
+            Generated: {new Date().toLocaleString()}
+          </p>
+
+          <div className="bg-green-100 py-3">
+            <p className="text-center text-sm font-bold text-green-700 tracking-wide">PAYMENT SUCCESSFUL</p>
+          </div>
+
+          <div className="px-6 mt-4">
+            <div className="border border-gray-100 rounded overflow-hidden mb-4">
+              <div className="bg-gray-100 px-4 py-2 text-sm font-bold text-blue-800 uppercase tracking-wide">
+                Payment Details
+              </div>
+              <DetailRow label="Client Name" value={result.booking?.client_name || '—'} />
+              <DetailRow label="Payment Reference" value={result.payment_reference || '—'} />
+              <DetailRow
+                label="Amount Paid"
+                value={typeof result.amount === 'number' ? `${result.currency} ${result.amount.toFixed(3)}` : '—'}
+              />
+              <DetailRow label="Payment Method" value="Thawani" />
+              <DetailRow label="Status" value="Paid" />
+            </div>
+
+            {result.booking && (
+              <div className="border border-gray-100 rounded overflow-hidden">
+                <div className="bg-gray-100 px-4 py-2 text-sm font-bold text-blue-800 uppercase tracking-wide">
+                  Booking Details
+                </div>
+                <DetailRow label="Booking ID" value={`#${result.booking.id}`} />
+                <DetailRow label="Car" value={result.booking.car_name || '—'} />
+                <DetailRow label="Plate Number" value={result.booking.plate_number || '—'} />
+                <DetailRow label="Pickup Date" value={result.booking.pickup_date || '—'} />
+                <DetailRow label="Return Date" value={result.booking.return_date || '—'} />
+                <DetailRow label="Pickup Location" value={result.booking.pickup_location || '—'} />
+                <DetailRow label="Dropoff Location" value={result.booking.dropoff_location || '—'} />
+              </div>
+            )}
+          </div>
+
+          <div className="bg-blue-800 text-white px-6 py-3 mt-10 flex justify-between items-center">
+            <div>
+              <p className="text-xs font-bold">ABELIZA CAR RENTALS</p>
+              <p className="text-[10px] text-blue-200 mt-0.5">
+                123 Rental Street, Salalah Oman &nbsp;|&nbsp; info@abeliza.com &nbsp;|&nbsp; +96896069582
+              </p>
+            </div>
+            <p className="text-[10px]">Thank you for booking with us.</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

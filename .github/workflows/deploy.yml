@@ -23,3 +23,6 @@ jobs:
             docker compose exec -T backend python manage.py migrate
             docker compose exec -T backend python manage.py collectstatic --noinput
             docker image prune -f
+
+
+
