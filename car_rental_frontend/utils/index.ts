@@ -1,10 +1,11 @@
+import { getApiHost } from '../app/lib/apiHost';
 import { CarProps, FilterProps } from "@/types";
 
 export async function fetchCars(filters: FilterProps) {
   const {manufacturer, year, model, limit, fuel} = filters;
 
   const response = await fetch(
-    `http://127.0.0.1:8000/core/v1/cars/?make=${manufacturer}&year=${year}&model=${model}&limit=${limit}&fuel_type=${fuel}`
+    `${getApiHost()}/cars/?make=${manufacturer}&year=${year}&model=${model}&limit=${limit}&fuel_type=${fuel}`
   );
 
   const contentType = response.headers.get("content-type");

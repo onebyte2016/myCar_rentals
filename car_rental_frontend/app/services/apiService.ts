@@ -1,3 +1,4 @@
+import { getApiHost } from '../lib/apiHost';
 
 import { error } from "console";
 import { json } from "stream/consumers";
@@ -49,7 +50,7 @@ const apiService = {
   }
 
   return new Promise((resolve, reject) => {
-    fetch(`${process.env.NEXT_PUBLIC_API_HOST}${url}`, {
+    fetch(`${getApiHost()}${url}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -72,7 +73,7 @@ const apiService = {
     //     const token = await getAccessToken()
 
     //     return new Promise((resolve, reject) => {
-    //         fetch(`${process.env.NEXT_PUBLIC_API_HOST}${url}`, {
+    //         fetch(`${getApiHost()}${url}`, {
     //             method: 'GET',
     //             headers: {
     //                 'Accept': 'application/json',
@@ -97,7 +98,7 @@ const apiService = {
 
   const isFormData = data instanceof FormData;
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_HOST}${url}`, {
+  const res = await fetch(`${getApiHost()}${url}`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -156,7 +157,7 @@ const apiService = {
     postWithoutToken: async function (url:string, data: any): Promise<any> {
         console.log('post', url, data);
         return new Promise((resolve, reject) =>{
-            fetch(`${process.env.NEXT_PUBLIC_API_HOST}${url}`, {
+            fetch(`${getApiHost()}${url}`, {
                 method: 'POST',
                 body: data,
                 headers: {
@@ -181,7 +182,7 @@ const apiService = {
   put: async (endpoint: string, data: any, options: RequestOptions = {}) => {
   const token = await getAccessToken();
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_HOST}${endpoint}`, {
+  const res = await fetch(`${getApiHost()}${endpoint}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -199,7 +200,7 @@ const apiService = {
 patch: async (endpoint: string, data: any, options: RequestOptions = {}) => {
   const token = await getAccessToken();
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_HOST}${endpoint}`, {
+  const res = await fetch(`${getApiHost()}${endpoint}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -217,7 +218,7 @@ patch: async (endpoint: string, data: any, options: RequestOptions = {}) => {
 delete: async (endpoint: string, options: RequestOptions = {}) => {
   const token = await getAccessToken();
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_HOST}${endpoint}`, {
+  const res = await fetch(`${getApiHost()}${endpoint}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -232,7 +233,7 @@ delete: async (endpoint: string, options: RequestOptions = {}) => {
 },
 
   uploadFile: async (endpoint: string, formData: FormData, options: RequestOptions = {}) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_HOST}${endpoint}`, {
+    const res = await fetch(`${getApiHost()}${endpoint}`, {
       method: "POST",
       headers: {
         ...getAuthHeader(), // include JWT for uploads if needed

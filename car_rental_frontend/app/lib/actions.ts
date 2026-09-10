@@ -1,5 +1,6 @@
 
 "use server";
+import { getApiHost } from './apiHost';
 import { cookies } from "next/headers";
 import apiService from "../services/apiService";
 import { logoutApi } from "../services/authService";
@@ -17,7 +18,7 @@ export async function handleRefresh(): Promise<string | null> {
   }
 
   const res = await fetch(
-    "http://localhost:8000/core/v1/user/token/refresh/",
+    `${getApiHost()}/user/token/refresh/`,
     {
       method: "POST",
       headers: {
@@ -32,7 +33,7 @@ export async function handleRefresh(): Promise<string | null> {
     return null;
   }
 
-  const data = await res.json();
+  const data = (await res.json()) as Record<string, any>;
 
   if (!data?.access) {
     await resetAuthCookies();
@@ -136,7 +137,7 @@ export async function getRefreshToken(){
 
 
 export async function loginUser(email: string, password: string) {
-  const res = await fetch("http://127.0.0.1:8000/core/v1/user/token/", {
+  const res = await fetch(`${getApiHost()}/user/token/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -148,7 +149,7 @@ export async function loginUser(email: string, password: string) {
     return { success: false, error: "Invalid credentials" };
   }
 
-  const data = await res.json();
+  const data = (await res.json()) as Record<string, any>;
 
   if (!data.access || !data.refresh) {
     return { success: false, error: "Invalid token response" };
@@ -202,7 +203,7 @@ export async function registerUser(
   password2: string
 ) {
   try {
-    const res = await fetch("http://localhost:8000/core/v1/user/register/", {
+    const res = await fetch(`${getApiHost()}/user/register/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -213,7 +214,7 @@ export async function registerUser(
       }),
     });
 
-    const data = await res.json();
+    const data = (await res.json()) as Record<string, any>;
 
     if (!res.ok) {
       const firstError =
@@ -235,7 +236,7 @@ function firstErrorMessage(data: any, fallback: string): string {
 
 export async function requestPasswordReset(email: string) {
   try {
-    const res = await fetch("http://127.0.0.1:8000/core/v1/user/password/reset/", {
+    const res = await fetch(`${getApiHost()}/user/password/reset/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -260,7 +261,7 @@ export async function confirmPasswordReset(
   newPassword2: string
 ) {
   try {
-    const res = await fetch("http://127.0.0.1:8000/core/v1/user/password/reset/confirm/", {
+    const res = await fetch(`${getApiHost()}/user/password/reset/confirm/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -284,13 +285,13 @@ export async function confirmPasswordReset(
 }
 // export async function registerUser(fullName: string, email: string, password: string, password2: string) {
 //     try {
-//       const res = await fetch("http://localhost:8000/core/v1/user/register/", {
+//       const res = await fetch(`${getApiHost()}/user/register/`, {
 //         method: "POST",
 //         headers: { "Content-Type": "application/json" },
 //         body: JSON.stringify({ full_name: fullName, email, password, password2 }),
 //       });
   
-//       const data = await res.json();
+//       const data = (await res.json()) as Record<string, any>;
   
 //       if (!res.ok) {
 //         // Django REST Framework often returns errors as { field: [errors] }

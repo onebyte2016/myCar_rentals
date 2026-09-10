@@ -1,3 +1,4 @@
+import { getApiHost } from '../lib/apiHost';
 import { cookies } from "next/headers";
 
 export const apiService = {
@@ -5,7 +6,7 @@ export const apiService = {
     try {
       const token = (await cookies()).get("session_access_token")?.value;
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_HOST}${endpoint}`, {
+      const res = await fetch(`${getApiHost()}${endpoint}`, {
         method: "GET",
         headers: {
           "Accept": "application/json",

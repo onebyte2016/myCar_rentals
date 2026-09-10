@@ -1,3 +1,4 @@
+import { getApiHost } from '../lib/apiHost';
 import apiService from "./apiService";
 
 export async function logoutApi(refreshToken: string) {
