@@ -127,26 +127,6 @@ export default function PaymentModal({
         return
       }
 
-      if (gateway === 'stripe') {
-        const data = await apiService.post('/payments/stripe/create-intent/', {
-          booking_id: bookingId,
-          amount: pricing.total,
-          currency: 'USD',
-          coupon_code: coupon,
-        })
-        const { loadStripe } = await import('@stripe/stripe-js')
-        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
-        if (!stripe) throw new Error('Stripe failed to load')
-        const { error: stripeError } = await stripe.confirmPayment({
-          clientSecret: data.client_secret,
-          confirmParams: {
-            return_url: `${window.location.origin}/payment/stripe/confirm?ref=${data.payment_reference}`,
-          },
-        })
-        if (stripeError) throw new Error(stripeError.message)
-        return
-      }
-
       if (gateway === 'flutterwave_card') {
         const data = await apiService.post('/payments/flutterwave/initiate/', {
           booking_id: bookingId,

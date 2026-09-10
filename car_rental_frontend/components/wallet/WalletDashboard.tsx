@@ -52,25 +52,15 @@ export default function WalletDashboard() {
       const data = await apiService.post('/payments/wallet/topup/', {
         amount: topUpAmount,
         gateway: topUpGateway,
-        currency: topUpGateway === 'stripe' ? 'USD' : 'NGN',
+        currency: 'NGN',
       })
 
-      if (topUpGateway === 'stripe') {
-        // Use Stripe.js to confirm
-        const { loadStripe } = await import('@stripe/stripe-js')
-        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
-        if (!stripe) throw new Error('Stripe failed to load')
-
-        const { error } = await stripe.confirmPayment({
-          clientSecret: data.client_secret,
-          confirmParams: {
-            return_url: `${window.location.origin}/payment/wallet/topup/confirm?amount=${topUpAmount}&intent=${data.payment_intent_id}`,
-          },
-        })
-        if (error) throw new Error(error.message)
-      } else {
-        // Flutterwave redirect
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url
+      } else if (data.payment_link) {
         window.location.href = data.payment_link
+      } else {
+        throw new Error('No payment redirect URL returned')
       }
     } catch (err: any) {
       setTopUpError(err?.message || 'Top up failed')
